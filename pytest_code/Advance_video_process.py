@@ -509,7 +509,7 @@ def binary_wrap_img(undist, overdrive=False, debug=False):
 
 def video_lane_detectoion(img):
     global fail_counter
-    global left_liine, right_line
+    global left_line, right_line
     fail_allowed = 5
     threshold = 0.5  # 5% threshold
 
@@ -572,7 +572,7 @@ def video_lane_detectoion(img):
                     right_slope[i] <= prev_right_slope[i] * (1 + threshold):
                 right_hit += 1
 
-        if left_hit / len(left_slope) <= 0.8 and right_hit / len(right_hit) <= 0.8:
+        if left_hit / len(left_slope) >= 0.8 and right_hit / len(right_slope) >= 0.8:
             confident_level += 1
 
         # If condfident level high,append to previous averaging
@@ -587,18 +587,12 @@ def video_lane_detectoion(img):
             left_line.detected = True
             right_line.detected = True
 
-            if not left_line.recent_xfitted and not right_line.recent_xfitted:
-                left_line.recent_xfitted = left_fitx
-                right_line.recent_xfitted = right_fitx
-                left_line.bestx = left_fitx
-                right_line.bestx = right_fitx
-            else:
-                left_line.recent_xfitted.append(left_fitx)
-                right_line.recent_xfitted.append(right_fitx)
+            left_fitx_temp = [left_line.recent_xfitted,left_fitx]
+            right_fitx_temp = [right_line.recent_xfitted,right_fitx]
 
-                # calculate best fitx for both line in case there is a detection fail in the code
-                left_line.bestx = np.mean(left_line.recent_xfitted, axis=0)
-                right_line.bestx = np.mean(right_line.recent_xfitted, axis=0)
+            # calculate best fitx for both line in case there is a detection fail in the code
+            left_line.bestx = np.mean(left_fitx_temp, axis=0)
+            right_line.bestx = np.mean(right_fitx_temp, axis=0)
 
             fail_counter = 0
         else:
@@ -610,7 +604,21 @@ def video_lane_detectoion(img):
             left_fitx = left_line.bestx
             right_fitx = right_line.bestx
 
+    else:
+        left_line.detected = True
+        right_line.detected = True
+        left_line.radius_of_curvature = curvatures[0]
+        right_line.radius_of_curvature = curvatures[1]
+        left_line.current_fit = left_fit
+        right_line.current_fit = right_fit
+        left_line.recent_xfitted = left_fitx
+        right_line.recent_xfitted = right_fitx
+        left_line.bestx = left_fitx
+        right_line.bestx = right_fitx
+
     result_img = draw_poly_fill(binary_wrap, undist, left_fitx, right_fitx, ploty,curvatures)
+    print('Confident Level:',confident_level)
+    print('fail Counter:', fail_counter)
     return result_img
 
 from moviepy.editor import VideoFileClip
@@ -619,12 +627,12 @@ from IPython.display import HTML
 left_line = Line()
 right_line = Line()
 fail_counter = 0
-output = '/temp_output/video_output/project_video.mp4'
+output = '../temp_output/video_output/project_video.mp4'
 ## To speed up the testing process you may want to try your pipeline on a shorter subclip of the video
 ## To do so add .subclip(start_second,end_second) to the end of the line below
 ## Where start_second and end_second are integer values representing the start and end of the subclip
 ## You may also uncomment the following line for a subclip of the first 5 seconds
 ##clip2 = VideoFileClip('test_videos/solidYellowLeft.mp4').subclip(0,5)
-clip2 = VideoFileClip('../project_video.mp4').subclip(0,5)
+clip2 = VideoFileClip('../project_video.mp4')
 project_clip = clip2.fl_image(video_lane_detectoion)
 project_clip.write_videofile(output, audio=False)
