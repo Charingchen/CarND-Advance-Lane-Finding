@@ -617,8 +617,8 @@ def video_lane_detectoion(img):
         right_line.bestx = right_fitx
 
     result_img = draw_poly_fill(binary_wrap, undist, left_fitx, right_fitx, ploty,curvatures)
-    print('Confident Level:',confident_level)
-    print('fail Counter:', fail_counter)
+    # print('Confident Level:',confident_level)
+    # print('fail Counter:', fail_counter)
     return result_img
 
 from moviepy.editor import VideoFileClip
