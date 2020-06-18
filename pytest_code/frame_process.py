@@ -222,3 +222,24 @@ def image_process(image, overdrive=False):
         color_binary = np.dstack((np.zeros_like(gradient_binary), binary_s, gradient_binary)) * 255
 
     return combined_binary, color_binary
+
+def binary_wrap_img(undist, overdrive=False, debug=False):
+    src, dst = mask_image(undist)
+
+    binary, color_binary = image_process(undist, overdrive)
+
+    img_size = (undist.shape[1], undist.shape[0])
+
+    warped = perspective_transform(binary)
+    if debug:
+        f = plt.figure()
+        f, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9))
+        f.tight_layout()
+        ax1.imshow(binary)
+        ax1.set_title('Binary Image', fontsize=50)
+        ax2.imshow(warped)
+        ax2.set_title('Warped Image', fontsize=50)
+        plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
+
+    return warped
+
