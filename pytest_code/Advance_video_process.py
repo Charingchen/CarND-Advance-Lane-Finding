@@ -102,10 +102,10 @@ def fit_poly(img_shape, leftx, lefty, rightx, righty):
     return left_fitx, right_fitx, ploty, left_fit, right_fit, [left_curverad, right_curverad]
 
 
-def find_lane_pixels(binary_warped, left_only=False, right_only=False, plot=False):
+def find_lane_pixels(binary_warped, run_left=False, run_all=False, plot=False):
     # Logic to setup which line to run
-    left_run = left_only or (True if not (left_only or right_only) else False)
-    right_run = right_only or (True if not (left_only or right_only) else False)
+    left_run = run_left or run_all
+    right_run = not run_left or run_all
 
     # Create a uniformed y coordinates for plotting
     img_shape = binary_warped.shape
@@ -208,14 +208,14 @@ def find_lane_pixels(binary_warped, left_only=False, right_only=False, plot=Fals
         plt.plot(left_fitx, ploty, color='yellow')
         plt.plot(right_fitx, ploty, color='yellow')
         plt.imshow(out_img)
-
     # Logic to return correct variables
-    if left_only:
-        return left_fitx, ploty, left_fit, left_curve
-    elif right_only:
-        return right_fitx, ploty, right_fit, right_curve
-    else:
+    if run_all:
         return left_fitx, right_fitx, ploty, left_fit, right_fit, [left_curve, right_curve]
+    else:
+        if run_left:
+            return left_fitx, ploty, left_fit, left_curve
+        else:
+            return right_fitx, ploty, right_fit, right_curve
 
 
 # def find_lane_pixels(binary_warped, plot=False):
@@ -314,7 +314,7 @@ def find_lane_pixels(binary_warped, left_only=False, right_only=False, plot=Fals
 #         plt.imshow(out_img)
 #
 #     return left_fitx, right_fitx, ploty, left_fit, right_fit, curvatures
-def search_around_poly(binary_warped, left_only=False, right_only=False,plot=False):
+def search_around_poly(binary_warped, run_left=False, run_all=False, plot=False):
     # HYPERPARAMETER
     # Choose the width of the margin around the previous polynomial to search
     # The quiz grader expects 100 here, but feel free to tune on your own!
@@ -324,8 +324,9 @@ def search_around_poly(binary_warped, left_only=False, right_only=False,plot=Fal
     ploty = np.linspace(0, img_shape[1] - 1, img_shape[0])
 
     # Logic to setup which line to run
-    left_run = left_only or (True if not (left_only or right_only) else False)
-    right_run = right_only or (True if not (left_only or right_only) else False)
+
+    left_run = run_left or run_all
+    right_run = not run_left or run_all
 
     # Grab activated pixels
     nonzero = binary_warped.nonzero()
@@ -384,12 +385,15 @@ def search_around_poly(binary_warped, left_only=False, right_only=False,plot=Fal
         plt.imshow(result)
 
     # Logic to return correct variables
-    if left_only:
-        return left_fitx, ploty, left_fit, left_curve
-    elif right_only:
-        return right_fitx, ploty, right_fit, right_curve
-    else:
+    if run_all:
         return left_fitx, right_fitx, ploty, left_fit, right_fit, [left_curve, right_curve]
+    else:
+        if run_left:
+            return left_fitx, ploty, left_fit, left_curve
+        else:
+            return right_fitx, ploty, right_fit, right_curve
+
+
 #
 # def search_around_poly(binary_warped, left_fit, right_fit, plot=False):
 #     # HYPERPARAMETER
@@ -490,7 +494,25 @@ def draw_poly_fill(binary_wrap, undist, left_fitx, right_fitx, ploty, curvatures
     return result
 
 
-def single_lane_detection(line):
+def single_lane_detection(line,binary_wrap,undist,run_left=False,fail_counter = 5):
+    # If the line detected previous iteration, preform search base on previous polynomial
+    if line.detected:
+        #binary_wrap = binary_wrap_img(undist)
+        fitx, ploty,fit,curve = search_around_poly(binary_wrap,run_left)
+    else:
+        if line.fail_count < fail_counter:
+        # If fail counter is less, preform simplify image filter and use sliding window to find lines
+            #binary_wrap = binary_wrap_img(undist)
+            fitx,ploty,fit,curve = find_lane_pixels(binary_wrap,run_left)
+        # If fail too many times, preform a more complex image filter and sliding window
+        else:
+            new_binary_wrap = binary_wrap_img(undist, overdrive=True)
+            # Need to find a way to share this in case of the other line failed to detect as well
+            fitx, ploty, fit, curve = find_lane_pixels(new_binary_wrap, run_left)
+
+    # Implement confident level, relate this with previous confident level to reduce check
+
+
 
 
 
