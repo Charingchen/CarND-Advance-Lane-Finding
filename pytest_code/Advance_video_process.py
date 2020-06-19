@@ -314,7 +314,82 @@ def find_lane_pixels(binary_warped, left_only=False, right_only=False, plot=Fals
 #         plt.imshow(out_img)
 #
 #     return left_fitx, right_fitx, ploty, left_fit, right_fit, curvatures
+def search_around_poly(binary_warped, left_only=False, right_only=False,plot=False):
+    # HYPERPARAMETER
+    # Choose the width of the margin around the previous polynomial to search
+    # The quiz grader expects 100 here, but feel free to tune on your own!
+    margin = 100
+    # Create a uniformed y coordinates for plotting
+    img_shape = binary_warped.shape
+    ploty = np.linspace(0, img_shape[1] - 1, img_shape[0])
 
+    # Logic to setup which line to run
+    left_run = left_only or (True if not (left_only or right_only) else False)
+    right_run = right_only or (True if not (left_only or right_only) else False)
+
+    # Grab activated pixels
+    nonzero = binary_warped.nonzero()
+    nonzeroy = np.array(nonzero[0])
+    nonzerox = np.array(nonzero[1])
+
+    if left_run:
+        left_lane_inds = ((nonzerox >= (left_line.current_fit[0] * nonzeroy ** 2 + left_line.current_fit[1] * nonzeroy +
+                                        left_line.current_fit[2] - margin)) &
+                          (nonzerox < (left_line.current_fit[0] * nonzeroy ** 2 + left_line.current_fit[1] * nonzeroy +
+                                       left_line.current_fit[2] + margin))).nonzero()[0]
+        # Again, extract left and right line pixel positions
+        leftx = nonzerox[left_lane_inds]
+        lefty = nonzeroy[left_lane_inds]
+        left_fitx, left_fit, left_curve = fit_one_line(img_shape, lefty, leftx, ploty)
+
+    if right_run:
+        right_lane_inds = ((nonzerox >= (right_line.current_fit[0] * nonzeroy ** 2 + right_line.current_fit[1] * nonzeroy +
+                                         right_line.current_fit[2] - margin)) &
+                           (nonzerox < (right_line.current_fit[0] * nonzeroy ** 2 + right_line.current_fit[1] * nonzeroy +
+                                        right_line.current_fit[2] + margin))).nonzero()[0]
+        rightx = nonzerox[right_lane_inds]
+        righty = nonzeroy[right_lane_inds]
+        right_fitx, right_fit, right_curve = fit_one_line(img_shape, righty, rightx, ploty)
+
+
+    ## Visualization ##
+    # Create an image to draw on and an image to show the selection window
+    if plot:
+        out_img = np.dstack((binary_warped, binary_warped, binary_warped)) * 255
+        window_img = np.zeros_like(out_img)
+        # Color in left and right line pixels
+        out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
+        out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
+
+        # Generate a polygon to illustrate the search window area
+        # And recast the x and y points into usable format for cv2.fillPoly()
+        left_line_window1 = np.array([np.transpose(np.vstack([left_fitx - margin, ploty]))])
+        left_line_window2 = np.array([np.flipud(np.transpose(np.vstack([left_fitx + margin,
+                                                                        ploty])))])
+        left_line_pts = np.hstack((left_line_window1, left_line_window2))
+        right_line_window1 = np.array([np.transpose(np.vstack([right_fitx - margin, ploty]))])
+        right_line_window2 = np.array([np.flipud(np.transpose(np.vstack([right_fitx + margin,
+                                                                         ploty])))])
+        right_line_pts = np.hstack((right_line_window1, right_line_window2))
+
+        # Draw the lane onto the warped blank image
+        cv2.fillPoly(window_img, np.int_([left_line_pts]), (0, 255, 0))
+        cv2.fillPoly(window_img, np.int_([right_line_pts]), (0, 255, 0))
+        result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
+
+        # Plot the polynomial lines onto the image
+        plt.plot(left_fitx, ploty, color='yellow')
+        plt.plot(right_fitx, ploty, color='yellow')
+
+        plt.imshow(result)
+
+    # Logic to return correct variables
+    if left_only:
+        return left_fitx, ploty, left_fit, left_curve
+    elif right_only:
+        return right_fitx, ploty, right_fit, right_curve
+    else:
+        return left_fitx, right_fitx, ploty, left_fit, right_fit, [left_curve, right_curve]
 
 def search_around_poly(binary_warped, left_fit, right_fit, plot=False):
     # HYPERPARAMETER
@@ -384,25 +459,6 @@ def search_around_poly(binary_warped, left_fit, right_fit, plot=False):
 
     return left_fitx, right_fitx, ploty, left_fit, right_fit, curvatures
 
-
-def fit_lane_line(binary_wrap, prev_fit, plot=False):
-    """
-    Logic to handle video processing frame by frame find lan pixel
-
-    """
-    # Detect if there is previous line fit
-    if not prev_fit:
-        # call find lane line for the first time
-        left_fitx, right_fitx, ploty, left_fit, right_fit, curvatures = find_lane_pixels(binary_wrap, plot)
-    else:
-        left_fitx, right_fitx, ploty, left_fit, right_fit, curvatures = search_around_poly(binary_wrap, prev_fit[0],
-                                                                                           prev_fit[1], plot)
-        # call search around poly instead
-        # search around poly has handle there is no find according to prevous logic to catch
-        # search find failure
-    prev_fit = [left_fit, right_fit]
-
-    return left_fitx, right_fitx, ploty, prev_fit, curvatures
 
 
 def draw_poly_fill(binary_wrap, undist, left_fitx, right_fitx, ploty, curvatures):
