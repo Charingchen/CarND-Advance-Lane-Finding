@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-# glob is used to reading all the similar calbration image
+# glob is used to reading all the similar calibration image
 import glob
 
 from frame_process import *
@@ -517,17 +517,17 @@ def single_lane_detection(line,binary_wrap,undist,run_left=False,fail_counter = 
 
 
 
-def video_lane_detectoion(img):
-    global left_line, right_line
-    fail_allowed = 5
-    threshold = 0.5  # 5% threshold
-
-    # Un-distort image using Camera calibration data
-    undist = undistort_img(img)
-
-    # Left line detection
-
-    # Right line detection
+# def video_lane_detectoion(img):
+#     global left_line, right_line
+#     fail_allowed = 5
+#     threshold = 0.5  # 5% threshold
+#
+#     # Un-distort image using Camera calibration data
+#     undist = undistort_img(img)
+#
+#     # Left line detection
+#
+#     # Right line detection
 
 
 
