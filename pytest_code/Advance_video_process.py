@@ -344,14 +344,14 @@ def search_around_poly(binary_warped, run_left=False, run_all=False, plot=False)
         left_fitx, left_fit, left_curve = fit_one_line(img_shape, lefty, leftx, ploty)
 
     if right_run:
-        right_lane_inds = ((nonzerox >= (right_line.current_fit[0] * nonzeroy ** 2 + right_line.current_fit[1] * nonzeroy +
-                                         right_line.current_fit[2] - margin)) &
-                           (nonzerox < (right_line.current_fit[0] * nonzeroy ** 2 + right_line.current_fit[1] * nonzeroy +
-                                        right_line.current_fit[2] + margin))).nonzero()[0]
+        right_lane_inds = \
+        ((nonzerox >= (right_line.current_fit[0] * nonzeroy ** 2 + right_line.current_fit[1] * nonzeroy +
+                       right_line.current_fit[2] - margin)) &
+         (nonzerox < (right_line.current_fit[0] * nonzeroy ** 2 + right_line.current_fit[1] * nonzeroy +
+                      right_line.current_fit[2] + margin))).nonzero()[0]
         rightx = nonzerox[right_lane_inds]
         righty = nonzeroy[right_lane_inds]
         right_fitx, right_fit, right_curve = fit_one_line(img_shape, righty, rightx, ploty)
-
 
     ## Visualization ##
     # Create an image to draw on and an image to show the selection window
@@ -494,16 +494,16 @@ def draw_poly_fill(binary_wrap, undist, left_fitx, right_fitx, ploty, curvatures
     return result
 
 
-def single_lane_detection(line,binary_wrap,undist,run_left=False,fail_counter = 5):
+def single_lane_detection(line, undist, run_left=False, fail_counter=5):
     # If the line detected previous iteration, preform search base on previous polynomial
-    if line.detected:
-        #binary_wrap = binary_wrap_img(undist)
-        fitx, ploty,fit,curve = search_around_poly(binary_wrap,run_left)
+    binary_wrap = binary_wrap_img(undist)
+    if line.detected and line.confident >= 3:
+        fitx, ploty, fit, curve = search_around_poly(binary_wrap, run_left)
     else:
-        if line.fail_count < fail_counter:
         # If fail counter is less, preform simplify image filter and use sliding window to find lines
-            #binary_wrap = binary_wrap_img(undist)
-            fitx,ploty,fit,curve = find_lane_pixels(binary_wrap,run_left)
+        if line.fail_count < fail_counter or line.confident >= 1:
+            fitx, ploty, fit, curve = find_lane_pixels(binary_wrap, run_left)
+
         # If fail too many times, preform a more complex image filter and sliding window
         else:
             new_binary_wrap = binary_wrap_img(undist, overdrive=True)
@@ -511,13 +511,24 @@ def single_lane_detection(line,binary_wrap,undist,run_left=False,fail_counter = 
             fitx, ploty, fit, curve = find_lane_pixels(new_binary_wrap, run_left)
 
     # Implement confident level, relate this with previous confident level to reduce check
+    if line.radius_of_curvature is None:
+        line.detected = True
+        line.radius_of_curvature = curve
+        line.current_fit = fit
+        left_line.recent_xfitted = fitx
+        line.bestx = fitx
+        return line
+
+    if line.confident <= 1:
+        if left_line.radius_of_curvature * (1 + threshold) >= curvatures[0] > \
+                left_line.radius_of_curvature * (1 - threshold) and \
+                right_line.radius_of_curvature * (1 + threshold) >= curvatures[1] > right_line.radius_of_curvature * (
+                1 - threshold):
+            confident_level += 1
 
 
 
-
-
-
-def video_lane_detectoion(img):
+def video_lane_detection(img):
     global left_line, right_line
     fail_allowed = 5
     threshold = 0.5  # 5% threshold
@@ -530,10 +541,6 @@ def video_lane_detectoion(img):
     # Right line detection
 
 
-
-
-
-
 def video_lane_detectoion(img):
     global fail_counter
     global left_line, right_line
@@ -543,14 +550,14 @@ def video_lane_detectoion(img):
     # Undistort image using Camera calibration data
     undist = undistort_img(img)
 
-    # Check if previou line is detected
+    # Check if previous line is detected
     if left_line.detected and right_line.detected:
-        # Set overdrive to defalut False to reduce runtime
+        # Set overdrive to default False to reduce runtime
         binary_wrap = binary_wrap_img(undist)
         left_fitx, right_fitx, ploty, left_fit, right_fit, curvatures = \
             search_around_poly(binary_wrap, left_line.current_fit, right_line.current_fit)
     else:
-        # If fail counter is < 5 times, preform quick filter and calcuations
+        # If fail counter is < 5 times, preform quick filter and calculation
         if fail_counter < fail_allowed:
             binary_wrap = binary_wrap_img(undist)
             left_fitx, right_fitx, ploty, left_fit, right_fit, curvatures = \
@@ -568,16 +575,16 @@ def video_lane_detectoion(img):
     if left_line.radius_of_curvature and right_line.radius_of_curvature:
 
         # Check the new lines against previous curvatures
-        if curvatures[0] <= left_line.radius_of_curvature * (1 + threshold) and \
-                curvatures[0] > left_line.radius_of_curvature * (1 - threshold) and \
-                curvatures[1] <= right_line.radius_of_curvature * (1 + threshold) and \
-                curvatures[1] > right_line.radius_of_curvature * (1 - threshold):
+        if left_line.radius_of_curvature * (1 + threshold) >= curvatures[0] > \
+                left_line.radius_of_curvature * (1 - threshold) and \
+                right_line.radius_of_curvature * (1 + threshold) >= curvatures[1] > right_line.radius_of_curvature * (
+                1 - threshold):
             confident_level += 1
 
         # Check the new lines if they seperate about the same compare to average
         current_x_dist = right_fitx[0] - left_fitx[0]
         before_x_dist = right_line.recent_xfitted[0] - left_line.recent_xfitted[0]
-        if current_x_dist <= before_x_dist * (1 + threshold) and current_x_dist > before_x_dist * (1 - threshold):
+        if before_x_dist * (1 + threshold) >= current_x_dist > before_x_dist * (1 - threshold):
             confident_level += 1
         # Check the slope from previouse to see if the new result is approx parallel
         # Slope of second degree ploy is its derivative, which is Ax + B
@@ -592,19 +599,17 @@ def video_lane_detectoion(img):
         left_hit = 0
         right_hit = 0
         for i in range(len(left_slope)):
-            if left_slope[i] > prev_left_slope[i] * (1 - threshold) and \
-                    left_slope[i] <= prev_left_slope[i] * (1 + threshold):
+            if prev_left_slope[i] * (1 - threshold) < left_slope[i] <= prev_left_slope[i] * (1 + threshold):
                 left_hit += 1
-            if right_slope[i] > prev_right_slope[i] * (1 - threshold) and \
-                    right_slope[i] <= prev_right_slope[i] * (1 + threshold):
+            if prev_right_slope[i] * (1 - threshold) < right_slope[i] <= prev_right_slope[i] * (1 + threshold):
                 right_hit += 1
 
         if left_hit / len(left_slope) >= 0.8 and right_hit / len(right_slope) >= 0.8:
             confident_level += 1
 
-        # If condfident level high,append to previous averaging
+        # If confident level high,append to previous averaging
         if confident_level >= 3:
-            # Record everything to the line classs
+            # Record everything to the line class
             left_line.current_fit = left_fit
             right_line.current_fit = right_fit
 
