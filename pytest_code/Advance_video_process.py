@@ -515,15 +515,13 @@ def single_lane_detection(line, undist, run_left=False, fail_counter=5):
         line.detected = True
         line.radius_of_curvature = curve
         line.current_fit = fit
-        left_line.recent_xfitted = fitx
+        line.recent_xfitted = fitx
         line.bestx = fitx
         return line
 
     if line.confident <= 1:
-        if left_line.radius_of_curvature * (1 + threshold) >= curvatures[0] > \
-                left_line.radius_of_curvature * (1 - threshold) and \
-                right_line.radius_of_curvature * (1 + threshold) >= curvatures[1] > right_line.radius_of_curvature * (
-                1 - threshold):
+        if line.radius_of_curvature * (1 + threshold) >= curve > \
+                line.radius_of_curvature * (1 - threshold):
             confident_level += 1
 
 
