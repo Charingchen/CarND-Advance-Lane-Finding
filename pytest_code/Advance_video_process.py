@@ -519,10 +519,11 @@ def single_lane_detection(line, undist, run_left=False, fail_counter=5):
         line.bestx = fitx
         return line
 
-    if line.confident <= 1:
-        if line.radius_of_curvature * (1 + threshold) >= curve > \
-                line.radius_of_curvature * (1 - threshold):
-            confident_level += 1
+    if line.radius_of_curvature * (1 + 0.05) >= curve > \
+            line.radius_of_curvature * (1 - 0.05):
+        line.confident += 1
+    else:
+        line.confident -= 1
 
 
 
