@@ -27,16 +27,14 @@ class Line():
         self.confident = 0
         # Fail to detect line compare previous result
         self.fail_count = 0
-
-        # Not used yet
-        # distance in meters of vehicle center from the line
-        self.line_base_pos = None
-        # difference in fit coefficients between last and new fits
-        self.diffs = np.array([0, 0, 0], dtype='float')
+        # distance in pixels of vehicle center from the line
+        self.line_to_center = None
         # x values for detected line pixels
         self.allx = None
-        # y values for detected line pixels
-        self.ally = None
+        # y values for detected line pixels this should never change base on the same resolution
+        self.ploty = None
+        # difference in fit coefficients between last and new fits
+        self.diffs = np.array([0, 0, 0], dtype='float')
 
 
 def fit_one_line(img_shape, y, x, ploty):
@@ -345,10 +343,10 @@ def search_around_poly(binary_warped, run_left=False, run_all=False, plot=False)
 
     if right_run:
         right_lane_inds = \
-        ((nonzerox >= (right_line.current_fit[0] * nonzeroy ** 2 + right_line.current_fit[1] * nonzeroy +
-                       right_line.current_fit[2] - margin)) &
-         (nonzerox < (right_line.current_fit[0] * nonzeroy ** 2 + right_line.current_fit[1] * nonzeroy +
-                      right_line.current_fit[2] + margin))).nonzero()[0]
+            ((nonzerox >= (right_line.current_fit[0] * nonzeroy ** 2 + right_line.current_fit[1] * nonzeroy +
+                           right_line.current_fit[2] - margin)) &
+             (nonzerox < (right_line.current_fit[0] * nonzeroy ** 2 + right_line.current_fit[1] * nonzeroy +
+                          right_line.current_fit[2] + margin))).nonzero()[0]
         rightx = nonzerox[right_lane_inds]
         righty = nonzeroy[right_lane_inds]
         right_fitx, right_fit, right_curve = fit_one_line(img_shape, righty, rightx, ploty)
@@ -494,37 +492,71 @@ def draw_poly_fill(binary_wrap, undist, left_fitx, right_fitx, ploty, curvatures
     return result
 
 
-def single_lane_detection(line, undist, run_left=False, fail_counter=5):
+def single_lane_detection(line, undist, run_left=False, fail_limit=5):
     # If the line detected previous iteration, preform search base on previous polynomial
     binary_wrap = binary_wrap_img(undist)
     if line.detected and line.confident >= 3:
         fitx, ploty, fit, curve = search_around_poly(binary_wrap, run_left)
     else:
         # If fail counter is less, preform simplify image filter and use sliding window to find lines
-        if line.fail_count < fail_counter or line.confident >= 1:
+        if line.fail_count < fail_limit or line.confident >= 1:
             fitx, ploty, fit, curve = find_lane_pixels(binary_wrap, run_left)
 
         # If fail too many times, preform a more complex image filter and sliding window
         else:
-            new_binary_wrap = binary_wrap_img(undist, overdrive=True)
+            binary_wrap = binary_wrap_img(undist, overdrive=True)
             # Need to find a way to share this in case of the other line failed to detect as well
-            fitx, ploty, fit, curve = find_lane_pixels(new_binary_wrap, run_left)
-
-    # Implement confident level, relate this with previous confident level to reduce check
+            fitx, ploty, fit, curve = find_lane_pixels(binary_wrap, run_left)
+    # Calculate bmeters
+    current_line_to_center = abs(fitx[-1] - binary_wrap.shape[0] / 2)
+    # if the radius is None meaning first time run, saving all the parameter in line
     if line.radius_of_curvature is None:
         line.detected = True
         line.radius_of_curvature = curve
         line.current_fit = fit
         line.recent_xfitted = fitx
         line.bestx = fitx
-        return line
-
-    if line.radius_of_curvature * (1 + 0.05) >= curve > \
-            line.radius_of_curvature * (1 - 0.05):
-        line.confident += 1
+        line.allx = [fitx]
+        line.line_to_center = current_line_to_center
+        line.ploty = ploty
     else:
-        line.confident -= 1
+        # Here check for current results with previous.
+        confident = 0
+        if line.radius_of_curvature * (1 + 0.2) >= curve > \
+                line.radius_of_curvature * (1 - 0.2):
+            confident += 1
 
+        # Check line distance to the center
+        if line.line_to_center * (1 + 0.1) >= current_line_to_center > \
+                line.line_to_center * (1 - 0.1):
+            confident += 1
+        # Calculate fit coefficients difference
+        current_diff = fit - line.current_fit
+        if line.diffs * (1 + 0.1) >= current_diff > \
+                line.diffs * (1 - 0.1):
+            confident += 1
+        # try not strict one first, can change later
+        # If the confident levle is great than 2, record the result into line
+        if confident > 1:
+            # Append result into line
+            line.detected = True
+            line.radius_of_curvature = curve
+            line.current_fit = fit
+            line.recent_xfitted = fitx
+            line.allx.append(fitx)
+            line.line_to_center = current_line_to_center
+            line.fail_count = 0
+
+            # average x fitted only takes the most recent 20
+            if len(line.allx) > 20:
+                line.bestx = np.mean(line.allx[-20:], axis=0)
+            else:
+                line.bestx = np.mean(line.allx, axis=0)
+        # else incease fail counter, discard current result
+        else:
+            line.fail_count += 1
+        line.confident = confident
+    return binary_wrap
 
 
 def video_lane_detection(img):
@@ -536,8 +568,19 @@ def video_lane_detection(img):
     undist = undistort_img(img)
 
     # Left line detection
-
+    binary_wrap = single_lane_detection(left_line, undist, True, fail_allowed)
     # Right line detection
+    _ = single_lane_detection(right_line, undist, False, fail_allowed)
+
+    if left_line.confident < 2 or right_line.confident < 2:
+        # Run parallel and slope check
+        # Check the new lines if they seperate about the same compare to average
+        current_x_dist = right_line.recent_xfitted[0] - left_line.recent_xfitted[0]
+
+    result_img = draw_poly_fill(binary_wrap, undist, left_line.recent_xfitted, right_line.recent_xfitted
+                                , left_line.ploty, [left_line.radius_of_curvature,
+                                                    right_line.radius_of_curvature])
+    return result_img
 
 
 def video_lane_detectoion(img):
