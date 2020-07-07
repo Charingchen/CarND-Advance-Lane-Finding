@@ -485,9 +485,18 @@ def draw_poly_fill(binary_wrap, undist, left_fitx, right_fitx, ploty, curvatures
     left_curve_text = 'Left Radius of Curvature: ' + str(round(curvatures[0], 2)) + 'Meters'
     right_curve_text = 'Right Radius of Curvature: ' + str(round(curvatures[1], 2)) + 'Meters'
     #     print(curvatures[0],curvatures[1])
-    result = cv2.putText(result, left_curve_text, (200, 100), cv2.FONT_HERSHEY_SIMPLEX,
+    result = cv2.putText(result, left_curve_text, (300, 100), cv2.FONT_HERSHEY_SIMPLEX,
                          1, (0, 255, 255), 2, cv2.LINE_AA)
-    result = cv2.putText(result, right_curve_text, (200, 150), cv2.FONT_HERSHEY_SIMPLEX,
+    result = cv2.putText(result, right_curve_text, (300, 150), cv2.FONT_HERSHEY_SIMPLEX,
+                         1, (0, 255, 255), 2, cv2.LINE_AA)
+
+    # To dubug, put the line infor too
+    left_line_status = 'left: Fail counter:'+str(left_line.fail_count)+ ' confident:' + str(left_line.confident)
+    right_line_status = 'right: Fail counter:'+str(right_line.fail_count)+ ' confident:' + str(right_line.confident)
+
+    result = cv2.putText(result, left_line_status, (50, 50), cv2.FONT_HERSHEY_SIMPLEX,
+                         1, (0, 255, 255), 2, cv2.LINE_AA)
+    result = cv2.putText(result, right_line_status, (600, 50), cv2.FONT_HERSHEY_SIMPLEX,
                          1, (0, 255, 255), 2, cv2.LINE_AA)
     return result
 
@@ -532,12 +541,12 @@ def single_lane_detection(line, undist, run_left=False, fail_limit=5):
             confident += 1
         # Calculate fit coefficients difference
         current_diff = fit - line.current_fit
-        if line.diffs * (1 + 0.1) >= current_diff > \
-                line.diffs * (1 - 0.1):
+
+        if np.all(current_diff <= line.diffs * (1 + 0.5)) and np.all(current_diff > line.diffs * (1 - 0.5)):
             confident += 1
         # try not strict one first, can change later
         # If the confident levle is great than 2, record the result into line
-        if confident > 1:
+        if confident >= 1:
             # Append result into line
             line.detected = True
             line.radius_of_curvature = curve
@@ -709,5 +718,5 @@ output = '../temp_output/video_output/project_video.mp4'
 ## You may also uncomment the following line for a subclip of the first 5 seconds
 # clip2 = VideoFileClip('../project_video.mp4')
 clip2 = VideoFileClip('../project_video.mp4').subclip(0, 5)
-project_clip = clip2.fl_image(video_lane_detectoion)
+project_clip = clip2.fl_image(video_lane_detection)
 project_clip.write_videofile(output, audio=False)
