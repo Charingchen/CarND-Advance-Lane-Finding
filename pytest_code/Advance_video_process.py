@@ -540,9 +540,9 @@ def single_lane_detection(line, undist, run_left=False, fail_limit=5):
                 line.line_to_center * (1 - 0.1):
             confident += 1
         # Calculate fit coefficients difference
-        current_diff = fit - line.current_fit
+        # current_diff = fit - line.current_fit
 
-        if np.all(current_diff <= line.diffs * (1 + 0.5)) and np.all(current_diff > line.diffs * (1 - 0.5)):
+        if np.all(abs(fit) <= abs(line.current_fit) * (1 + 0.5)) and np.all(abs(fit) > abs(line.current_fit) * (1 - 0.5)):
             confident += 1
         # try not strict one first, can change later
         # If the confident levle is great than 2, record the result into line
@@ -716,7 +716,7 @@ output = '../temp_output/video_output/project_video.mp4'
 ## To do so add .subclip(start_second,end_second) to the end of the line below
 ## Where start_second and end_second are integer values representing the start and end of the subclip
 ## You may also uncomment the following line for a subclip of the first 5 seconds
-# clip2 = VideoFileClip('../project_video.mp4')
-clip2 = VideoFileClip('../project_video.mp4').subclip(0, 5)
+clip2 = VideoFileClip('../project_video.mp4')
+# clip2 = VideoFileClip('../project_video.mp4').subclip(0, 5)
 project_clip = clip2.fl_image(video_lane_detection)
 project_clip.write_videofile(output, audio=False)
