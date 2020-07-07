@@ -501,14 +501,14 @@ def draw_poly_fill(binary_wrap, undist, left_fitx, right_fitx, ploty, curvatures
     return result
 
 
-def single_lane_detection(line, undist, run_left=False, fail_limit=5):
+def single_lane_detection(line, undist, run_left=False, fail_limit=10):
     # If the line detected previous iteration, preform search base on previous polynomial
     binary_wrap = binary_wrap_img(undist)
     if line.detected and line.confident >= 2:
         fitx, ploty, fit, curve = search_around_poly(binary_wrap, run_left)
     else:
         # If fail counter is less, preform simplify image filter and use sliding window to find lines
-        if line.fail_count < fail_limit and line.fail_count > 0:
+        if line.fail_count < fail_limit and line.fail_count >= 0:
             fitx, ploty, fit, curve = find_lane_pixels(binary_wrap, run_left)
 
         # If fail too many times, preform a more complex image filter and sliding window
@@ -516,7 +516,8 @@ def single_lane_detection(line, undist, run_left=False, fail_limit=5):
             binary_wrap = binary_wrap_img(undist, overdrive=True)
             # Need to find a way to share this in case of the other line failed to detect as well
             fitx, ploty, fit, curve = find_lane_pixels(binary_wrap, run_left)
-    # Calculate bmeters
+
+    # Calculate in meters
     current_line_to_center = abs(fitx[-1] - binary_wrap.shape[0] / 2)
     # if the radius is None meaning first time run, saving all the parameter in line
     if line.radius_of_curvature is None:
@@ -531,10 +532,8 @@ def single_lane_detection(line, undist, run_left=False, fail_limit=5):
     else:
         # Here check for current results with previous.
         confident = 0
-        if line.radius_of_curvature * (1 + 0.2) >= curve > \
-                line.radius_of_curvature * (1 - 0.2):
+        if line.radius_of_curvature * (1 + 0.2) >= curve > line.radius_of_curvature * (1 - 0.2):
             confident += 1
-
         # Check line distance to the center
         if line.line_to_center * (1 + 0.1) >= current_line_to_center > \
                 line.line_to_center * (1 - 0.1):
@@ -547,7 +546,7 @@ def single_lane_detection(line, undist, run_left=False, fail_limit=5):
             confident += 1
         # try not strict one first, can change later
         # If the confident level is great than 2, record the result into line
-        if confident >= 1:
+        if confident >= 2:
             # Append result into line
             line.detected = True
             line.radius_of_curvature = curve
@@ -565,6 +564,7 @@ def single_lane_detection(line, undist, run_left=False, fail_limit=5):
         # else increase fail counter, discard current result
         else:
             line.fail_count += 1
+            # Need to include when fail count >30, clear all stored values and re-run the logic
         line.confident = confident
     return binary_wrap
 
