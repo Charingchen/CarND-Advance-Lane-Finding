@@ -491,8 +491,8 @@ def draw_poly_fill(binary_wrap, undist, left_fitx, right_fitx, ploty, curvatures
                          1, (0, 255, 255), 2, cv2.LINE_AA)
 
     # To dubug, put the line infor too
-    left_line_status = 'left: Fail counter:'+str(left_line.fail_count)+ ' confident:' + str(left_line.confident)
-    right_line_status = 'right: Fail counter:'+str(right_line.fail_count)+ ' confident:' + str(right_line.confident)
+    left_line_status = 'left: Fail counter:' + str(left_line.fail_count) + ' confident:' + str(left_line.confident)
+    right_line_status = 'right: Fail counter:' + str(right_line.fail_count) + ' confident:' + str(right_line.confident)
 
     result = cv2.putText(result, left_line_status, (50, 50), cv2.FONT_HERSHEY_SIMPLEX,
                          1, (0, 255, 255), 2, cv2.LINE_AA)
@@ -504,11 +504,11 @@ def draw_poly_fill(binary_wrap, undist, left_fitx, right_fitx, ploty, curvatures
 def single_lane_detection(line, undist, run_left=False, fail_limit=5):
     # If the line detected previous iteration, preform search base on previous polynomial
     binary_wrap = binary_wrap_img(undist)
-    if line.detected and line.confident >= 3:
+    if line.detected and line.confident >= 2:
         fitx, ploty, fit, curve = search_around_poly(binary_wrap, run_left)
     else:
         # If fail counter is less, preform simplify image filter and use sliding window to find lines
-        if line.fail_count < fail_limit or line.confident >= 1:
+        if line.fail_count < fail_limit and line.fail_count > 0:
             fitx, ploty, fit, curve = find_lane_pixels(binary_wrap, run_left)
 
         # If fail too many times, preform a more complex image filter and sliding window
@@ -542,10 +542,11 @@ def single_lane_detection(line, undist, run_left=False, fail_limit=5):
         # Calculate fit coefficients difference
         # current_diff = fit - line.current_fit
 
-        if np.all(abs(fit) <= abs(line.current_fit) * (1 + 0.5)) and np.all(abs(fit) > abs(line.current_fit) * (1 - 0.5)):
+        if np.all(abs(fit) <= abs(line.current_fit) * (1 + 0.5)) and np.all(
+                abs(fit) > abs(line.current_fit) * (1 - 0.5)):
             confident += 1
         # try not strict one first, can change later
-        # If the confident levle is great than 2, record the result into line
+        # If the confident level is great than 2, record the result into line
         if confident >= 1:
             # Append result into line
             line.detected = True
@@ -561,7 +562,7 @@ def single_lane_detection(line, undist, run_left=False, fail_limit=5):
                 line.bestx = np.mean(line.allx[-20:], axis=0)
             else:
                 line.bestx = np.mean(line.allx, axis=0)
-        # else incease fail counter, discard current result
+        # else increase fail counter, discard current result
         else:
             line.fail_count += 1
         line.confident = confident
@@ -586,7 +587,7 @@ def video_lane_detection(img):
         # Check the new lines if they seperate about the same compare to average
         current_x_dist = right_line.recent_xfitted[0] - left_line.recent_xfitted[0]
 
-    result_img = draw_poly_fill(binary_wrap, undist, left_line.recent_xfitted, right_line.recent_xfitted
+    result_img = draw_poly_fill(binary_wrap, undist, left_line.bestx, right_line.bestx
                                 , left_line.ploty, [left_line.radius_of_curvature,
                                                     right_line.radius_of_curvature])
     return result_img
