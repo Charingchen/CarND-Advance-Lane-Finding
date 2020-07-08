@@ -546,7 +546,7 @@ def single_lane_detection(line, undist, run_left=False, fail_limit=10):
             confident += 1
         # try not strict one first, can change later
         # If the confident level is great than 2, record the result into line
-        if confident >= 2:
+        if confident >= 1:
             # Append result into line
             line.detected = True
             line.radius_of_curvature = curve
@@ -712,12 +712,12 @@ from IPython.display import HTML
 left_line = Line()
 right_line = Line()
 fail_counter = 0
-output = '../temp_output/video_output/project_video.mp4'
+output = '../temp_output/video_output/challenge-project_video.mp4'
 ## To speed up the testing process you may want to try your pipeline on a shorter subclip of the video
 ## To do so add .subclip(start_second,end_second) to the end of the line below
 ## Where start_second and end_second are integer values representing the start and end of the subclip
 ## You may also uncomment the following line for a subclip of the first 5 seconds
-clip2 = VideoFileClip('../project_video.mp4')
+clip2 = VideoFileClip('../challenge_video.mp4').subclip(0,3)
 # clip2 = VideoFileClip('../project_video.mp4').subclip(0, 5)
 project_clip = clip2.fl_image(video_lane_detection)
 project_clip.write_videofile(output, audio=False)
