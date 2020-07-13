@@ -415,7 +415,6 @@ def single_lane_detection(line, undist, run_left=False, fail_limit=10):
 def video_lane_detection(img):
     global left_line, right_line
     fail_allowed = 5
-    threshold = 0.5  # 5% threshold
 
     # Un-distort image using Camera calibration data
     undist = undistort_img(img)
@@ -425,10 +424,6 @@ def video_lane_detection(img):
     # Right line detection
     _ = single_lane_detection(right_line, undist, False, fail_allowed)
 
-    if left_line.confident < 2 or right_line.confident < 2:
-        # Run parallel a nd slope check
-        # Check the new lines if they seperate about the same compare to average
-        current_x_dist = right_line.recent_xfitted[0] - left_line.recent_xfitted[0]
 
     result_img = draw_poly_fill(binary_wrap, undist )
     return result_img
@@ -439,13 +434,13 @@ from IPython.display import HTML
 
 left_line = Line()
 right_line = Line()
-fail_counter = 0
-output = '../temp_output/video_output/challenge-project_video.mp4'
+
+output_challenge = '../output_video/challenge_video.mp4'
 ## To speed up the testing process you may want to try your pipeline on a shorter subclip of the video
 ## To do so add .subclip(start_second,end_second) to the end of the line below
 ## Where start_second and end_second are integer values representing the start and end of the subclip
 ## You may also uncomment the following line for a subclip of the first 5 seconds
 # clip2 = VideoFileClip('../challenge_video.mp4').subclip(0, 3)
-clip2 = VideoFileClip('../project_video.mp4')
+clip2 = VideoFileClip('../challenge_video.mp4')
 project_clip = clip2.fl_image(video_lane_detection)
-project_clip.write_videofile(output, audio=False)
+project_clip.write_videofile(output_challenge, audio=False)
