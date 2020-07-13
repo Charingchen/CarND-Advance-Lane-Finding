@@ -17,9 +17,9 @@ The goals / steps of this project are the following:
 [image2]: ./output_images/undist_images.jpg "Undistort"
 [image3]: ./output_images/undistort0.jpg "test_undistort"
 [image4]: ./output_images/binary_overdrive.jpg "binary overdrive"
-[image5]: ./examples/color_fit_lines.jpg "Fit Visual"
-[image6]: ./examples/example_output.jpg "Output"
-[video1]: ./project_video.mp4 "Video"
+[image5]: ./output_images/wrap.jpg "wrap"
+[image6]: ./output_images/poly_final.jpg "ploy final"
+[video1]: ./output_video/project_video.mp4 "Video"
 
 # [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 
@@ -94,51 +94,72 @@ Following thresholds are applied:
 
 After experiment with all the threshold values, I created a function called `image_process` to combining all the process and output an binary image. When `overdrive` flag is set, one of colored output (R:R in RGB; G:Color filter result;B:Combined Gradient Result) is like:
 
-![alt text][image3]
+![alt text][image4]
+
+In the "frame_process.py", I combined all the process in `binary_wrop_img()`. This function will call for `mask_image`() to have src and dst and call `image_process()` to get the binary image and then wrap the image using `perspective_transform()`.
+
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+For the perspective transform, I have defined two functions: `mask_image()` and `perspective_transform()`.
 
+`mask_image` is used to define the source and destination coordinates for perspective transform. The source four points are defined by input of `mask_top_width` (top width of the trapezoid), `x_offset` (the distance of the bottom x coordinate of the trapezoid to the edge of the image in X direction),`y_offset` (the distance of the bottom y coordinate of the trapezoid to the edge of the image in Y direction) . Calculation shown as below:
 ```python
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
+    imshape=img.shape
+    # Calculate mask height
+    img_y_mid = imshape[0]*0.5
+    mask_height = int(img_y_mid*1.25)
+    img_x_mid = int(imshape[1]*0.5)
+    top_left = [img_x_mid - mask_top_width*0.5 , mask_height]
+    top_right = [img_x_mid + mask_top_width*0.5 , mask_height]
+    bottom_left = [x_offset,imshape[0]-y_offset]
+    bottom_right = [imshape[1]-x_offset,imshape[0]-y_offset]
+
 ```
+For the Destination coordinates, I simply defined as 
+```python
+# 25 is hardcoded to move the lane line to the bottom of the image
+    dst = np.float32([[dst_offset, imshape[0]-y_offset+25], [dst_offset, y_offset], 
+                                     [imshape[1]-dst_offset, y_offset], 
+                                     [imshape[1]-dst_offset, imshape[0]-y_offset+25]])
 
-This resulted in the following source and destination points:
-
-| Source        | Destination   | 
-|:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
+```
 
 I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
 
-![alt text][image4]
+![alt text][image5]
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+From now on, all the code has been saved to a different notebook to be more neat.
 
-![alt text][image5]
+The notebook file is called [Advance_pipeline.ipynb](./Advance_pipeline.ipynb)
+
+To identify the lane-line pixels, I decided to have a logic process one line at a time. Instead of running two lines in one function, I am able to run only one line if the previous result is bad while the other line has a high confident result. 
+
+To find hard to find or not so confident result, I run `find_lane_pixels()` using a more time consuming sliding windows logic.
+
+If the previous result is accurate, I will run `search_around_poly` to search an area around last polyfit result to save runtime.
+
+If there are a number of failed to detect lines, I will flag `overdrive` to True and run a more complex and time consuming `image_process()`
+
+Fit polynomial code and curvature calculation are in `fit_one_line()`.
+
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+curvature calculation is in `fit_one_line()`.
+
+To convert pixel to meters, I used following values:
+```python
+    ym_per_pix = 3 / 80
+    xm_per_pix = 3.7 / 570
+```
+And the radius of curvature is `curve_rad = (1 + (2 * fit_cr[0] * y_eval * ym_per_pix + fit_cr[1]) ** 2) ** 1.5 / np.absolute(2 * fit_cr[0])`
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+I implemented this step in my code in `Advance_pipline.ipynb` in the function `video_lane_detection()`.  Here is an example of my result on a test image:
 
 ![alt text][image6]
 
@@ -156,4 +177,12 @@ Here's a [link to my video result](./project_video.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+My Pipeline uses a counting up confident level to determine how the current iteration is compare to the previous result. This works on a stable and continuous good input image that yield consistant binary wrap images. Addtionally, the logic to judge the confident uses relative percentage, which would contribute more error if the algorithm continously failed to detect.
+
+Therefore, if the fail time is greater than 30 times, the result stored in thie Line class would not be accurate enough for the confident check to work properly. That's why when the car is turning and the algorithm is keep failling to detect, the left line detection was not able to quickly adapt to the change. 
+
+To improve this, if I have more time to work on this, I would use if function directly to throw away some very far off results based on the line to the center distance and slope change. I would also create a logic that can detect the car is turning, increase the threshold on confident checks to run smoothly around the corner. 
+
+I also notice my pipeline would go nuts on challenge video due to no correct line pixels found in sliding window logic. I would add logic to handle return null of x y coordinate of pixel finding. 
+
+One more fun thing I want to do later is to create videos for color filter stage, gradinet filter stage and lane pixel finding stage. Combine those clips to make video to debug and create a Youtube video to showcase how pipeline works.
