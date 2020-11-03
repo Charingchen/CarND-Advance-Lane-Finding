@@ -1,4 +1,4 @@
-# Advanced Lane Finding Project Writeup
+# Advanced Lane Finding Project
 
 The goals / steps of this project are the following:
 
@@ -21,21 +21,7 @@ The goals / steps of this project are the following:
 [image6]: ./output_images/poly_final.jpg "ploy final"
 [video1]: ./output_video/project_video.mp4 "Video"
 
-# [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
-
-### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
-
----
-
-### Writeup / README
-
-#### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  [Here](https://github.com/udacity/CarND-Advanced-Lane-Lines/blob/master/writeup_template.md) is a template writeup for this project you can use as a guide and a starting point.  
-
-You're reading it!
-
 ### Camera Calibration
-
-#### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
 The code is in Python notebook located in ["parameter_tuning.ipynb"](./parameter_tuning.ipynb) under Camera Calibration section.
 
@@ -57,7 +43,7 @@ In that script, I created a global variable `cali` that will hold `mtx,dist`. In
 
 ### Pipeline (single images)
 
-#### 1. Provide an example of a distortion-corrected image.
+#### An example of a distortion-corrected image
 
 To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
 
@@ -65,7 +51,7 @@ To demonstrate this step, I will describe how I apply the distortion correction 
 
 In the ["parameter_tuning.ipynb"](./parameter_tuning.ipynb), I printed out all the undistorted images for reference and they are also located at "./undistort_test_images"
 
-#### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
+#### Thresholded Binary Image
 
 I have run rgb, hsv, and hls to every test image to see which color filter would work the best among all the images. In the end, I concluded S and L in HLS, combined with R in RGB would be the channels I would use to do the color filtering. 
 
@@ -96,7 +82,7 @@ After experiment with all the threshold values, I created a function called `ima
 
 ![alt text][image4]
 
-#### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
+#### Perspective Transform
 
 For the perspective transform, I have defined two functions: `mask_image()` and `perspective_transform()`.
 
@@ -130,7 +116,7 @@ I verified that my perspective transform was working as expected by drawing the 
 In the "frame_process.py", I combined all the process in `binary_wrop_img()`. This function will call for `mask_image`() to have src and dst and call `image_process()` to get the binary image and then wrap the image using `perspective_transform()`.
 
 
-#### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
+#### Identifiy Lane-Line Pixels and Fit Polynomial?
 
 From now on, all the code has been saved to a different notebook to be more neat.
 
@@ -147,7 +133,7 @@ If there are a number of failed to detect lines, I will flag `overdrive` to True
 Fit polynomial code and curvature calculation are in `fit_one_line()`.
 
 
-#### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
+#### The Radius of Curvature
 
 curvature calculation is in `fit_one_line()`.
 
@@ -158,7 +144,7 @@ To convert pixels to meters, I used following values:
 ```
 And the radius of curvature is `curve_rad = (1 + (2 * fit_cr[0] * y_eval * ym_per_pix + fit_cr[1]) ** 2) ** 1.5 / np.absolute(2 * fit_cr[0])`
 
-#### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
+#### Lane Output
 
 I implemented this step in my code in `Advance_pipline.ipynb` in the function `video_lane_detection()`.  Here is an example of my result on a test image:
 
