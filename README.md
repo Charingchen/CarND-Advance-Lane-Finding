@@ -175,3 +175,37 @@ To improve this, if I have more time to work on this, I would use if function di
 I also notice my pipeline would go nuts on challenge video due to no correct line pixels found in sliding window logic. I would add logic to handle return null of x y coordinate of pixel finding. 
 
 One more fun thing I want to do later is to create videos for color filter stage, gradient filter stage and lane pixel finding stage. Combine those clips to make video to debug and create a Youtube video to showcase how pipeline works.
+
+
+### Udacity Review Feedback
+
+#### Pipeline (test images)
+* Color Transform and Gradients
+
+    You could try color thresholding in all RGB, HLS, HSV colorspaces to make the pipeline more robust. Color thresholding is also much faster to compute as opposed to the gradient calculation in the Sobel transform.
+    
+    Lab is another colorspace that should work well here, especially the "B" channel which should help identify the yellow lanes effectively.
+    
+    You can use contrast correction of initial images to fight excessive darkness or brightness. In addition to this, you can use some [morphological transformations](https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_imgproc/py_morphological_ops/py_morphological_ops.html) to highlight lines of interest even more and remove noise.
+    ```python
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2YUV)
+    img[:,:,0] = cv2.equalizeHist(img[:,:,0])
+    img = cv2.cvtColor(img, cv2.COLOR_YUV2RGB)
+    ```
+* Perspective transformation
+
+    The perspective transform looks good! The following paper would be a good read on the topic:
+    http://www.ijser.org/researchpaper%5CA-Simple-Birds-Eye-View-Transformation-Technique.pdf
+    
+* Meters per pixel
+
+    You have used the xm_per_pix value from the lessons here:
+    `xm_per_pix = 3.7/570`
+    
+    This assumes that the lane width would be a constant value of 570px (usually obtained from observing the difference between right and left lanes in the perspective transform). To make this value dynamic for each frame, I would recommend calculating the lane width (pixel value) using the left and right lane values estimated while fitting the lanes and then convert the width to metres.
+    
+    The ROC value is also fairly high in some areas. You could remove outlier values while smoothing the curve, by rejecting values over 5000 m or 10,000 m. Refer to the lessons for more details, especially the lesson “Tips and tricks for the project” in the project “Advanced Lane Finding Project” , section titled "Do your curvature values make sense?”.
+    
+* Discussion
+    Good discussion of the project. You could also use a deep learning approach which should be more robust to shadows and colors. The following article might be a good read:
+    https://medium.com/towards-data-science/lane-detection-with-deep-learning-part-1-9e096f3320b7
