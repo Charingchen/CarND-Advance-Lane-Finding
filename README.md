@@ -23,7 +23,7 @@ The goals / steps of this project are the following:
 
 ### Camera Calibration
 
-The code is in Python notebook located in ["parameter_tuning.ipynb"](./parameter_tuning.ipynb) under Camera Calibration section.
+The code is in Python notebook located in ["parameter_tuning.ipynb"](./parameter_tuning.ipynb) under Camera Calibration section. You can also view this in markdown format here [parameter_tuning](./parameter_tuning/parameter_tuning.md)
 
 Since I am calibrating the camera using a 9 by 6 chessboard on a flat surface, I have created a variable called `objpoints` that will hold x and y coordination of this 9 by 6 matrix with z = 0, i.e. (0,0,0) ,(1,0,0),(0,1,0)...and so on. This `objpoints` would be the same for all calibration image using this chessboard.
 
@@ -156,7 +156,9 @@ I implemented this step in my code in `Advance_pipline.ipynb` in the function `v
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](./output_video/project_video.mp4)
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/fI8OhJCGl7s/0.jpg)](https://www.youtube.com/watch?v=fI8OhJCGl7s)
+
+As you can see in the final video, the lane finding logic switching between sliding windows and search around poly to save run time. Also, around 20s in the video, you will see the lane detection fail to detect lanes but the mask lane would remain proximately in the same area due to the average and slope check logic.
 
 ---
 
